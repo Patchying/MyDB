@@ -5,6 +5,7 @@ from flask import Flask, render_template, jsonify
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import io
+import json
 import pandas as pd
 import os
 
@@ -12,8 +13,20 @@ app = Flask(__name__)
 
 # ─── Config ───────────────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(__file__)
-KEY_FILE  = os.path.join(BASE_DIR, 'service_account.json')
-SCOPES    = ['https://www.googleapis.com/auth/drive.readonly']
+SCOPES   = ['https://www.googleapis.com/auth/drive.readonly']
+
+
+def _load_credentials():
+    """Load service account creds from env variable (production) or local file (dev)."""
+    env_json = os.environ.get('GOOGLE_SERVICE_ACCOUNT_JSON')
+    if env_json:
+        # Production (Render): credentials stored as environment variable
+        info = json.loads(env_json)
+        return service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+    else:
+        # Local development: read from service_account.json file
+        key_file = os.path.join(BASE_DIR, 'service_account.json')
+        return service_account.Credentials.from_service_account_file(key_file, scopes=SCOPES)
 
 FILE_IDS = {
     'orders':      '1Z_iUvjHuVYuQn2QAnrDzvqSeffdbAye5',
@@ -26,8 +39,7 @@ _cache: dict = {}
 
 
 def _drive():
-    creds = service_account.Credentials.from_service_account_file(KEY_FILE, scopes=SCOPES)
-    return build('drive', 'v3', credentials=creds)
+    return build('drive', 'v3', credentials=_load_credentials())
 
 
 def _fetch_xlsx(drive, file_id: str) -> pd.DataFrame:

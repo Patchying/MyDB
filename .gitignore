@@ -24,3 +24,8 @@ out/
 .idea/
 *.swp
 *.swo
+
+# Google Service Account key — NEVER commit this!
+service_account.json
+*-service-account.json
+*.json.key

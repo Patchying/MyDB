@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sales Dashboard · Vibe Codist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── Reset & Base ───────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:       #4F46E5;
+      --primary-soft:  #EEF2FF;
+      --violet:        #7C3AED;
+      --pink:          #EC4899;
+      --amber:         #F59E0B;
+      --amber-soft:    #FEF3C7;
+      --green:         #10B981;
+      --green-soft:    #D1FAE5;
+      --cyan:          #06B6D4;
+      --cyan-soft:     #CFFAFE;
+      --red:           #EF4444;
+      --red-soft:      #FEE2E2;
+      --purple:        #8B5CF6;
+      --purple-soft:   #EDE9FE;
+      --bg:            #F1F5F9;
+      --card:          #FFFFFF;
+      --txt-dark:      #1E293B;
+      --txt-mid:       #64748B;
+      --txt-light:     #94A3B8;
+      --border:        #E2E8F0;
+      --shadow:        0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.05);
+      --shadow-md:     0 4px 12px rgba(0,0,0,.08);
+      --radius:        12px;
+      --radius-sm:     8px;
+    }
+
+    body {
+      font-family: 'Sarabun', sans-serif;
+      background: var(--bg);
+      color: var(--txt-dark);
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      color: #fff;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 12px rgba(79,70,229,.35);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-brand { display: flex; align-items: center; gap: 14px; }
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,.18);
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      border: 1px solid rgba(255,255,255,.25);
+    }
+    .brand-title { font-size: 20px; font-weight: 700; line-height: 1.2; }
+    .brand-sub   { font-size: 12px; opacity: .75; margin-top: 1px; }
+    .header-actions { display: flex; align-items: center; gap: 14px; }
+    .ts { font-size: 12px; opacity: .75; }
+    .btn-refresh {
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.3);
+      color: #fff;
+      padding: 7px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-family: 'Sarabun', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background .2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-refresh:hover { background: rgba(255,255,255,.3); }
+    .btn-refresh.loading { opacity: .6; pointer-events: none; }
+
+    /* ── Layout ──────────────────────────────────────────── */
+    .wrap { max-width: 1440px; margin: 0 auto; padding: 24px 28px 40px; }
+
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr;         gap: 16px; margin-bottom: 20px; }
+    .grid-1 { display: grid; grid-template-columns: 1fr;             gap: 16px; margin-bottom: 20px; }
+    .span-2 { grid-column: span 2; }
+
+    /* ── KPI Cards ───────────────────────────────────────── */
+    .kpi-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: transform .15s, box-shadow .15s;
+      cursor: default;
+    }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .kpi-card.c-revenue  { border-left-color: var(--primary); }
+    .kpi-card.c-orders   { border-left-color: var(--green); }
+    .kpi-card.c-customers{ border-left-color: var(--amber); }
+    .kpi-card.c-avg      { border-left-color: var(--cyan); }
+    .kpi-card.c-discount { border-left-color: var(--red); }
+    .kpi-card.c-units    { border-left-color: var(--purple); }
+
+    .kpi-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--txt-mid);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .kpi-icon {
+      width: 22px; height: 22px;
+      border-radius: 5px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+    .kpi-val  { font-size: 28px; font-weight: 700; line-height: 1.15; }
+    .kpi-note { font-size: 12px; color: var(--txt-light); }
+
+    /* ── Chart Cards ─────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      box-shadow: var(--shadow);
+    }
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--txt-dark);
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .c-icon {
+      width: 32px; height: 32px;
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 20px;
+    }
+
+    .chart-wrap canvas { max-height: 270px; }
+
+    /* ── Spinner ─────────────────────────────────────────── */
+    .spinner-wrap {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 160px; gap: 10px; color: var(--txt-light); font-size: 14px;
+    }
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Table ───────────────────────────────────────────── */
+    .tbl { width: 100%; border-collapse: collapse; }
+    .tbl th {
+      text-align: left; font-size: 11px; font-weight: 700;
+      color: var(--txt-mid); text-transform: uppercase;
+      letter-spacing: .07em; padding: 8px 10px;
+      border-bottom: 2px solid var(--border);
+    }
+    .tbl th.r, .tbl td.r { text-align: right; }
+    .tbl td {
+      padding: 11px 10px; font-size: 13.5px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .tbl tr:last-child td { border-bottom: none; }
+    .tbl tbody tr:hover td { background: #F8FAFC; }
+
+    .medal { font-size: 20px; line-height: 1; }
+    .rank-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--bg);
+      color: var(--txt-mid);
+      font-size: 12px; font-weight: 700;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .txt-primary { color: var(--primary); font-weight: 700; }
+    .txt-mid { color: var(--txt-mid); }
+    .name-row strong { font-weight: 600; }
+    .name-row small  { display: block; color: var(--txt-light); font-size: 12px; margin-top: 1px; }
+
+    /* ── Section label ───────────────────────────────────── */
+    .section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--txt-mid);
+      margin-bottom: 10px;
+      padding-left: 2px;
+    }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--txt-light);
+      padding: 8px 0 24px;
+    }
+
+    /* ── Responsive ──────────────────────────────────────── */
+    @media (max-width: 1100px) {
+      .grid-4 { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 840px) {
+      .wrap { padding: 16px; }
+      .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr 1fr; }
+      .span-2 { grid-column: span 1; }
+      .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    }
+    @media (max-width: 520px) {
+      .grid-4, .grid-3, .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-brand">
+    <div class="brand-icon">📊</div>
+    <div>
+      <div class="brand-title">Sales Dashboard</div>
+      <div class="brand-sub">Vibe Codist · ข้อมูลยอดขายและประสิทธิภาพ · May–Jun 2026</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <span class="ts" id="tsLabel">กำลังโหลดข้อมูล…</span>
+    <button class="btn-refresh" id="refreshBtn" onclick="refreshAll()">
+      <span id="refreshIcon">🔄</span> รีเฟรช
+    </button>
+  </div>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────────────────── -->
+<div class="wrap">
+
+  <!-- KPI Row -->
+  <p class="section-label">ภาพรวมสรุป (Key Metrics)</p>
+  <div class="grid-4" id="kpiRow">
+    <div class="spinner-wrap" style="grid-column:span 4"><div class="spinner"></div> กำลังโหลด…</div>
+  </div>
+
+  <!-- Daily Trend (full width) -->
+  <p class="section-label">แนวโน้มรายได้รายวัน (Daily Revenue)</p>
+  <div class="grid-1">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="c-icon" style="background:var(--primary-soft)">📈</div>
+          Daily Revenue Trend · May–Jun 2026
+        </div>
+        <span class="tag" style="background:var(--primary-soft);color:var(--primary)">Line Chart</span>
+      </div>
+      <div class="chart-wrap"><canvas id="cDailyTrend"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Monthly + Channel -->
+  <p class="section-label">รายได้รายเดือน & ช่องทางการขาย</p>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="c-icon" style="background:var(--green-soft)">📅</div>
+          Monthly Revenue (May vs Jun)
+        </div>
+        <span class="tag" style="background:var(--green-soft);color:var(--green)">2 Months</span>
+      </div>
+      <div class="chart-wrap"><canvas id="cMonthly"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="c-icon" style="background:var(--cyan-soft)">📡</div>
+          ช่องทางที่ลูกค้ามา (Acquisition Channel)
+        </div>
+        <span class="tag" style="background:var(--cyan-soft);color:var(--cyan)">Doughnut</span>
+      </div>
+      <div class="chart-wrap"><canvas id="cChannel"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Top Customers table -->
+  <p class="section-label">ลูกค้าสูงสุด (Top Customers)</p>
+  <div class="grid-1">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="c-icon" style="background:var(--amber-soft)">👑</div>
+          Top Customers by Revenue
+        </div>
+        <span class="tag" style="background:var(--amber-soft);color:var(--amber)">All 8 Customers</span>
+      </div>
+      <div id="topCustWrap"><div class="spinner-wrap"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- Best Products + Staff -->
+  <p class="section-label">สินค้าขายดี & พนักงานขาย</p>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="c-icon" style="background:var(--purple-soft)">🏆</div>
+          Best Selling Products (by Revenue)
+        </div>
+        <span class="tag" style="background:var(--purple-soft);color:var(--purple)">฿ Revenue</span>
+      </div>
+      <div class="chart-wrap"><canvas id="cProducts"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="c-icon" style="background:#FCE7F3">🧑‍💼</div>
+          Top Sales Staff (Revenue + Orders)
+        </div>
+        <span class="tag" style="background:#FCE7F3;color:#BE185D">5 Reps</span>
+      </div>
+      <div class="chart-wrap"><canvas id="cStaff"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Restaurant Types + Units Sold -->
+  <p class="section-label">ประเภทร้าน & ปริมาณสินค้า</p>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="c-icon" style="background:var(--amber-soft)">🍽️</div>
+          Revenue by Restaurant Type
+        </div>
+        <span class="tag" style="background:var(--amber-soft);color:var(--amber)">Pie</span>
+      </div>
+      <div class="chart-wrap"><canvas id="cRestaurant"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="c-icon" style="background:var(--green-soft)">📦</div>
+          Units Sold by Product
+        </div>
+        <span class="tag" style="background:var(--green-soft);color:var(--green)">Quantity</span>
+      </div>
+      <div class="chart-wrap"><canvas id="cUnits"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Discount Analysis (full width) -->
+  <p class="section-label">วิเคราะห์ส่วนลด (Discount Impact)</p>
+  <div class="grid-1">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">
+          <div class="c-icon" style="background:var(--red-soft)">🏷️</div>
+          Gross Revenue vs Discount vs Net Revenue by Product
+        </div>
+        <span class="tag" style="background:var(--red-soft);color:var(--red)">Stacked Bar</span>
+      </div>
+      <div class="chart-wrap"><canvas id="cDiscount"></canvas></div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<footer>Sales Dashboard · Powered by Google Drive &amp; Sheets API · Vibe Codist © 2026</footer>
+
+<!-- ── Script ───────────────────────────────────────────────────────────────── -->
+<script>
+/* ── Palette ─────────────────────────────────────────────────────────────── */
+const P = ['#4F46E5','#7C3AED','#EC4899','#F59E0B','#10B981','#06B6D4','#3B82F6','#84CC16'];
+
+/* ── Formatters ──────────────────────────────────────────────────────────── */
+const fmt  = n => n >= 1e6 ? '฿'+(n/1e6).toFixed(2)+'M'
+                : n >= 1e3 ? '฿'+(n/1e3).toFixed(0)+'K'
+                : '฿'+n.toLocaleString();
+const full = n => '฿'+n.toLocaleString();
+const num  = n => n.toLocaleString();
+
+/* ── Chart registry ──────────────────────────────────────────────────────── */
+const charts = {};
+function kill(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+/* ── Font defaults ───────────────────────────────────────────────────────── */
+Chart.defaults.font.family = "'Sarabun', sans-serif";
+
+const baseOpts = {
+  responsive: true,
+  maintainAspectRatio: true,
+  plugins: {
+    legend: { labels: { padding: 14, font: { size: 12 } } },
+    tooltip: { padding: 10, cornerRadius: 8 }
+  }
+};
+
+const yMoney = {
+  ticks: { callback: v => fmt(v) },
+  grid: { color: '#F1F5F9' }
+};
+const xNoGrid = { grid: { display: false } };
+
+/* ── KPIs ────────────────────────────────────────────────────────────────── */
+async function loadKPIs(){
+  const d = await fetch('/api/kpis').then(r=>r.json());
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card c-revenue">
+      <div class="kpi-label"><span class="kpi-icon" style="background:var(--primary-soft)">💰</span>รายได้รวม</div>
+      <div class="kpi-val">${full(d.total_revenue)}</div>
+      <div class="kpi-note">Total Revenue · May–Jun 2026</div>
+    </div>
+    <div class="kpi-card c-orders">
+      <div class="kpi-label"><span class="kpi-icon" style="background:var(--green-soft)">📋</span>จำนวนออเดอร์</div>
+      <div class="kpi-val">${num(d.total_orders)}</div>
+      <div class="kpi-note">Total Orders</div>
+    </div>
+    <div class="kpi-card c-customers">
+      <div class="kpi-label"><span class="kpi-icon" style="background:var(--amber-soft)">👥</span>ลูกค้าที่ซื้อ</div>
+      <div class="kpi-val">${d.active_customers}</div>
+      <div class="kpi-note">Active Customers</div>
+    </div>
+    <div class="kpi-card c-avg">
+      <div class="kpi-label"><span class="kpi-icon" style="background:var(--cyan-soft)">📊</span>เฉลี่ย/ออเดอร์</div>
+      <div class="kpi-val">${full(d.avg_order_value)}</div>
+      <div class="kpi-note">Avg Order Value</div>
+    </div>
+    <div class="kpi-card c-discount">
+      <div class="kpi-label"><span class="kpi-icon" style="background:var(--red-soft)">🏷️</span>ส่วนลดรวม</div>
+      <div class="kpi-val">${full(d.total_discount)}</div>
+      <div class="kpi-note">Total Discount Given</div>
+    </div>
+    <div class="kpi-card c-units">
+      <div class="kpi-label"><span class="kpi-icon" style="background:var(--purple-soft)">📦</span>ชิ้นที่ขายได้</div>
+      <div class="kpi-val">${num(d.total_units_sold)}</div>
+      <div class="kpi-note">Total Units Sold</div>
+    </div>
+  `;
+}
+
+/* ── Daily Trend ─────────────────────────────────────────────────────────── */
+async function loadDailyTrend(){
+  kill('daily');
+  const d = await fetch('/api/daily-trend').then(r=>r.json());
+  charts['daily'] = new Chart(document.getElementById('cDailyTrend'), {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [{
+        label: 'Revenue (฿)',
+        data: d.revenues,
+        borderColor: P[0],
+        backgroundColor: P[0]+'18',
+        fill: true, tension: 0.4,
+        pointRadius: 3, pointHoverRadius: 7,
+        borderWidth: 2.5,
+      }]
+    },
+    options: {
+      ...baseOpts,
+      scales: {
+        y: yMoney,
+        x: { ...xNoGrid, ticks: { maxTicksLimit: 12, maxRotation: 45 } }
+      }
+    }
+  });
+}
+
+/* ── Monthly ─────────────────────────────────────────────────────────────── */
+async function loadMonthly(){
+  kill('monthly');
+  const d = await fetch('/api/monthly-trend').then(r=>r.json());
+  charts['monthly'] = new Chart(document.getElementById('cMonthly'), {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [
+        { label: 'Revenue (฿)', data: d.revenues, backgroundColor: [P[0], P[1]],
+          borderRadius: 10, barThickness: 72, yAxisID: 'y' },
+        { label: 'Orders', data: d.orders, type: 'line',
+          borderColor: P[3], backgroundColor: P[3]+'22',
+          borderWidth: 2.5, pointRadius: 6,
+          yAxisID: 'y1' }
+      ]
+    },
+    options: {
+      ...baseOpts,
+      scales: {
+        y: yMoney,
+        y1: { position: 'right', grid: { display: false },
+              ticks: { color: P[3] } },
+        x: xNoGrid
+      }
+    }
+  });
+}
+
+/* ── Channel ─────────────────────────────────────────────────────────────── */
+async function loadChannel(){
+  kill('channel');
+  const d = await fetch('/api/channel-breakdown').then(r=>r.json());
+  charts['channel'] = new Chart(document.getElementById('cChannel'), {
+    type: 'doughnut',
+    data: {
+      labels: d.labels,
+      datasets: [{ data: d.revenues, backgroundColor: P, borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+    },
+    options: {
+      ...baseOpts,
+      cutout: '60%',
+      plugins: {
+        ...baseOpts.plugins,
+        legend: { position: 'right', labels: { padding: 10, font: { size: 12 } } },
+        tooltip: { callbacks: { label: c => ` ${c.label}: ${full(c.raw)}` } }
+      }
+    }
+  });
+}
+
+/* ── Top Customers (table) ───────────────────────────────────────────────── */
+async function loadTopCustomers(){
+  const d = await fetch('/api/top-customers').then(r=>r.json());
+  const medals = ['🥇','🥈','🥉'];
+  const rows = d.labels.map((name, i) => {
+    const avgOV = d.orders[i] ? Math.round(d.revenues[i]/d.orders[i]) : 0;
+    return `<tr>
+      <td style="text-align:center;width:36px">
+        ${i < 3 ? `<span class="medal">${medals[i]}</span>` : `<span class="rank-num">${i+1}</span>`}
+      </td>
+      <td>
+        <div class="name-row">
+          <strong>${name}</strong>
+          <small>${d.restaurants[i]}</small>
+        </div>
+      </td>
+      <td class="r"><span class="txt-mid" style="font-size:12px">${d.types[i]}</span></td>
+      <td class="r txt-primary">${full(d.revenues[i])}</td>
+      <td class="r">${d.orders[i]} ออเดอร์</td>
+      <td class="r txt-mid" style="font-size:12px">${full(avgOV)}/order</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('topCustWrap').innerHTML = `
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>#</th><th>ลูกค้า / ร้านอาหาร</th>
+          <th class="r">ประเภทร้าน</th>
+          <th class="r">รายได้รวม</th>
+          <th class="r">ออเดอร์</th>
+          <th class="r">เฉลี่ย</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+/* ── Products by Revenue ─────────────────────────────────────────────────── */
+async function loadProducts(){
+  kill('products');
+  const d = await fetch('/api/top-products').then(r=>r.json());
+  const shortLabels = d.labels.map(l => l.replace('Wongnai ', ''));
+  charts['products'] = new Chart(document.getElementById('cProducts'), {
+    type: 'bar',
+    data: {
+      labels: shortLabels,
+      datasets: [{ label: 'Net Revenue (฿)', data: d.revenues,
+        backgroundColor: P, borderRadius: 6 }]
+    },
+    options: {
+      ...baseOpts,
+      indexAxis: 'y',
+      scales: {
+        x: { ...yMoney, grid: { color: '#F1F5F9' } },
+        y: { ...xNoGrid, ticks: { font: { size: 12 } } }
+      }
+    }
+  });
+}
+
+/* ── Staff ───────────────────────────────────────────────────────────────── */
+async function loadStaff(){
+  kill('staff');
+  const d = await fetch('/api/top-staff').then(r=>r.json());
+  charts['staff'] = new Chart(document.getElementById('cStaff'), {
+    type: 'bar',
+    data: {
+      labels: d.labels,
+      datasets: [
+        { label: 'Revenue (฿)', data: d.revenues,
+          backgroundColor: P, borderRadius: 8, yAxisID: 'y' },
+        { label: 'Orders', data: d.orders, type: 'line',
+          borderColor: P[4], backgroundColor: P[4]+'22',
+          borderWidth: 2.5, pointRadius: 6, yAxisID: 'y1' }
+      ]
+    },
+    options: {
+      ...baseOpts,
+      scales: {
+        y: yMoney,
+        y1: { position: 'right', grid: { display: false }, ticks: { color: P[4] } },
+        x: xNoGrid
+      }
+    }
+  });
+}
+
+/* ── Restaurant Type ─────────────────────────────────────────────────────── */
+async function loadRestaurant(){
+  kill('restaurant');
+  const d = await fetch('/api/restaurant-types').then(r=>r.json());
+  charts['restaurant'] = new Chart(document.getElementById('cRestaurant'), {
+    type: 'pie',
+    data: {
+      labels: d.labels,
+      datasets: [{ data: d.revenues, backgroundColor: P, borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: {
+      ...baseOpts,
+      plugins: {
+        ...baseOpts.plugins,
+        legend: { position: 'right', labels: { padding: 10, font: { size: 12 } } },
+        tooltip: { callbacks: { label: c => ` ${c.label}: ${full(c.raw)}` } }
+      }
+    }
+  });
+}
+
+/* ── Units Sold ──────────────────────────────────────────────────────────── */
+async function loadUnits(){
+  kill('units');
+  const d = await fetch('/api/top-products').then(r=>r.json());
+  charts['units'] = new Chart(document.getElementById('cUnits'), {
+    type: 'bar',
+    data: {
+      labels: d.labels.map(l => l.replace('Wongnai ', '')),
+      datasets: [{ label: 'Units Sold', data: d.quantities,
+        backgroundColor: P.map(c => c+'CC'), borderColor: P, borderWidth: 2, borderRadius: 6 }]
+    },
+    options: {
+      ...baseOpts,
+      scales: {
+        y: { grid: { color: '#F1F5F9' } },
+        x: { ...xNoGrid, ticks: { maxRotation: 30, font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+/* ── Discount Analysis ───────────────────────────────────────────────────── */
+async function loadDiscount(){
+  kill('discount');
+  const d = await fetch('/api/discount-analysis').then(r=>r.json());
+  const shortLabels = d.labels.map(l => l.replace('Wongnai ', ''));
+  charts['discount'] = new Chart(document.getElementById('cDiscount'), {
+    type: 'bar',
+    data: {
+      labels: shortLabels,
+      datasets: [
+        { label: 'Net Revenue (฿)', data: d.net,
+          backgroundColor: P[0]+'CC', borderRadius: 6 },
+        { label: 'Discount Given (฿)', data: d.discounts,
+          backgroundColor: '#EF4444BB', borderRadius: 6 }
+      ]
+    },
+    options: {
+      ...baseOpts,
+      scales: {
+        y: yMoney,
+        x: { ...xNoGrid, ticks: { font: { size: 12 } } }
+      }
+    }
+  });
+}
+
+/* ── Load All ────────────────────────────────────────────────────────────── */
+async function loadAll(){
+  document.getElementById('tsLabel').textContent = 'กำลังโหลดข้อมูล…';
+  await Promise.all([
+    loadKPIs(),
+    loadDailyTrend(),
+    loadMonthly(),
+    loadChannel(),
+    loadTopCustomers(),
+    loadProducts(),
+    loadStaff(),
+    loadRestaurant(),
+    loadUnits(),
+    loadDiscount(),
+  ]);
+  const now = new Date();
+  document.getElementById('tsLabel').textContent =
+    `อัปเดตล่าสุด: ${now.toLocaleTimeString('th-TH')}`;
+}
+
+async function refreshAll(){
+  const btn  = document.getElementById('refreshBtn');
+  const icon = document.getElementById('refreshIcon');
+  btn.classList.add('loading');
+  icon.textContent = '⏳';
+  await fetch('/api/refresh');
+  await loadAll();
+  btn.classList.remove('loading');
+  icon.textContent = '🔄';
+}
+
+loadAll();
+</script>
+</body>
+</html>
